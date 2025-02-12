@@ -62,13 +62,13 @@ upload_lock = threading.Lock()
 # ---------------------
 # Helper 函式：拆分長訊息發送
 # ---------------------
-def send_long_message(reply_token, message, max_length=4000):
-    chunks = [message[i:i+max_length] for i in range(0, len(message), max_length)]
-    if len(chunks) > 5:
-        chunks = chunks[:5]
-        chunks[-1] += "\n[訊息過長，僅顯示部分內容]"
-    messages = [TextSendMessage(text=chunk) for chunk in chunks]
-    line_bot_api.reply_message(reply_token, messages)
+# def send_long_message(reply_token, message, max_length=4000):
+#     chunks = [message[i:i+max_length] for i in range(0, len(message), max_length)]
+#     if len(chunks) > 5:
+#         chunks = chunks[:5]
+#         chunks[-1] += "\n[訊息過長，僅顯示部分內容]"
+#     messages = [TextSendMessage(text=chunk) for chunk in chunks]
+#     line_bot_api.reply_message(reply_token, messages)
 
 # ---------------------
 # Helper 函式：確保檔案名稱唯一
@@ -97,28 +97,28 @@ def store_locally(data, file_name, category, group_name):
 # ---------------------
 # Helper 函式：建立 Excel 列表（此功能保留，但可依需求移除）
 # ---------------------
-def create_excel_list(key, group_name_val):
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "上傳檔案列表"
-    headers = ["類型", "檔案名稱", "上傳時間", "本地連結", "雲端連結"]
-    ws.append(headers)
-    if key in uploaded_files:
-        for cat, display in [("images", "圖片"), ("files", "檔案"), ("videos", "影片")]:
-            for record in uploaded_files[key].get(cat, []):
-                ws.append([display,
-                           record.get("name", ""),
-                           record.get("upload_time", ""),
-                           record.get("local_link", ""),
-                           record.get("cloud_link", "")])
-    else:
-        ws.append(["", "無檔案", "", "", ""])
-    excel_dir = os.path.join(DATA_DIR, "excel")
-    os.makedirs(excel_dir, exist_ok=True)
-    excel_filename = f"List-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.xlsx"
-    excel_path = os.path.join(excel_dir, excel_filename)
-    wb.save(excel_path)
-    return f"{request.host_url}static/excel/{excel_filename}"
+# def create_excel_list(key, group_name_val):
+#     wb = openpyxl.Workbook()
+#     ws = wb.active
+#     ws.title = "上傳檔案列表"
+#     headers = ["類型", "檔案名稱", "上傳時間", "本地連結", "雲端連結"]
+#     ws.append(headers)
+#     if key in uploaded_files:
+#         for cat, display in [("images", "圖片"), ("files", "檔案"), ("videos", "影片")]:
+#             for record in uploaded_files[key].get(cat, []):
+#                 ws.append([display,
+#                            record.get("name", ""),
+#                            record.get("upload_time", ""),
+#                            record.get("local_link", ""),
+#                            record.get("cloud_link", "")])
+#     else:
+#         ws.append(["", "無檔案", "", "", ""])
+#     excel_dir = os.path.join(DATA_DIR, "excel")
+#     os.makedirs(excel_dir, exist_ok=True)
+#     excel_filename = f"List-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.xlsx"
+#     excel_path = os.path.join(excel_dir, excel_filename)
+#     wb.save(excel_path)
+#     return f"{request.host_url}static/excel/{excel_filename}"
 
 # ---------------------
 # Helper 函式：在 Google Drive 建立子資料夾（若不存在則建立）
@@ -235,27 +235,22 @@ def handle_text_message(event):
         reply_enabled[key] = False
         reply = TextSendMessage(text="❌ 已關閉回覆訊息。")
         line_bot_api.reply_message(event.reply_token, reply)
-    elif user_message == "@檢查群組":
-        group_name_val = get_group_name(event)
-        reply = TextSendMessage(text=f"📌 這個群組名稱是 `{group_name_val}`")
-        line_bot_api.reply_message(event.reply_token, reply)
     elif user_message == "@幫助":
         help_text = (
             "【機器人使用說明】\n\n"
             "【基本指令】\n"
-            "  @開啟訊息           ：啟用自動回覆上傳結果。\n"
-            "  @關閉訊息           ：停用自動回覆上傳結果。\n\n"
+            "  @開啟訊息：啟用自動回覆上傳結果。\n"
+            "  @關閉訊息 ：停用自動回覆上傳結果。\n\n"
             "【存儲控制指令】\n"
-            "  @開啟本地下載        ：啟用本地存檔（預設開啟），檔案將存放至伺服器內部（data 資料夾），不提供公開下載連結。\n"
-            "  @關閉本地下載        ：停用本地存檔，上傳後不會存檔至本地。\n"
+            "  @開啟本地下載：啟用本地存檔（預設開啟），檔案將存放至伺服器內部（data 資料夾），不提供公開下載連結。\n"
+            "  @關閉本地下載：停用本地存檔，上傳後不會存檔至本地。\n"
             "  @設定雲端資料夾 <資料夾ID>：設定上傳至 Google Drive 的目標父資料夾ID。\n"
-            "  @開啟雲端上傳        ：啟用雲端上傳，檔案將上傳至 Google Drive 中，\n"
-            "                         系統會在指定父資料夾下建立以群組名稱命名的子資料夾，\n"
-            "                         再於該資料夾下建立 images、files、videos 子資料夾，\n"
-            "                         最後將檔案上傳至對應的子資料夾中。\n"
-            "  @關閉雲端上傳        ：停用雲端上傳。\n\n"
+            "  @開啟雲端上傳：啟用雲端上傳，檔案將上傳至 Google Drive 中，\n"
+            "               系統會在指定父資料夾下建立以群組名稱命名的子資料夾，\n"
+            "               再於該資料夾下建立 images、files、videos 子資料夾，\n"
+            "               最後將檔案上傳至對應的子資料夾中。\n"
+            "  @關閉雲端上傳 ：停用雲端上傳。\n\n"
             "【其他指令】\n"
-            "  @檢查群組           ：查詢目前對話所在的群組名稱（個人聊天則顯示『個人聊天』）。\n"
             "  @幫助               ：顯示本使用說明資訊。\n\n"
             "【操作流程】\n"
             "  1. 初次使用時，請先執行 @開啟訊息 以啟用自動回覆。\n"

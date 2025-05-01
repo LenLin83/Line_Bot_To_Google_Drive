@@ -60,13 +60,13 @@ upload_lock = threading.Lock()
 # ---------------------
 # Helper 函式：拆分長訊息發送
 # ---------------------
-# def send_long_message(reply_token, message, max_length=4000):
-#     chunks = [message[i:i+max_length] for i in range(0, len(message), max_length)]
-#     if len(chunks) > 5:
-#         chunks = chunks[:5]
-#         chunks[-1] += "\n[訊息過長，僅顯示部分內容]"
-#     messages = [TextSendMessage(text=chunk) for chunk in chunks]
-#     line_bot_api.reply_message(reply_token, messages)
+def send_long_message(reply_token, message, max_length=4000):
+    chunks = [message[i:i+max_length] for i in range(0, len(message), max_length)]
+    if len(chunks) > 5:
+        chunks = chunks[:5]
+        chunks[-1] += "\n[訊息過長，僅顯示部分內容]"
+    messages = [TextSendMessage(text=chunk) for chunk in chunks]
+    line_bot_api.reply_message(reply_token, messages)
 
 # ---------------------
 # Helper 函式：確保檔案名稱唯一
@@ -91,6 +91,7 @@ def store_locally(data, file_name, category, group_name):
     with open(file_path, "wb") as f:
         f.write(data)
     return file_path
+
 
 
 # ---------------------
@@ -213,24 +214,20 @@ def handle_text_message(event):
             "【機器人使用說明】\n\n"
             "【基本指令】\n"
             "  @開啟訊息：啟用自動回覆上傳結果。\n"
-            "  @關閉訊息 ：停用自動回覆上傳結果。\n\n"
+            "  @關閉訊息：停用自動回覆上傳結果。\n\n"
             "【存儲控制指令】\n"
             "  @開啟本地下載：啟用本地存檔（預設開啟），檔案將存放至伺服器內部（data 資料夾），不提供公開下載連結。\n"
             "  @關閉本地下載：停用本地存檔，上傳後不會存檔至本地。\n"
             "  @設定雲端資料夾 <資料夾ID>：設定上傳至 Google Drive 的目標父資料夾ID。\n"
-            "  @開啟雲端上傳：啟用雲端上傳，檔案將上傳至 Google Drive 中，\n"
-            "               系統會在指定父資料夾下建立以群組名稱命名的子資料夾，\n"
-            "               再於該資料夾下建立 images、files、videos 子資料夾，\n"
-            "               最後將檔案上傳至對應的子資料夾中。\n"
-            "  @關閉雲端上傳 ：停用雲端上傳。\n\n"
+            "  @開啟雲端上傳：啟用雲端上傳，檔案將上傳至 Google Drive 中，系統會在指定父資料夾下建立以群組名稱命名的子資料夾，再於該資料夾下建立 images、files、videos 子資料夾，最後將檔案上傳至對應的子資料夾中。"
+            "  @關閉雲端上傳：停用雲端上傳。\n\n"
             "【其他指令】\n"
+            "  @檢查群組：查詢目前對話所在的群組名稱（個人聊天則顯示『個人聊天』）。\n"
             "  @幫助：顯示本使用說明資訊。\n\n"
             "【操作流程】\n"
-            "  1. 初次使用時，請先執行 @開啟訊息 以啟用自動回覆。\n"
+            "  1. 初次使用時，請先執行 @開啟訊息 以啟用自動回覆。\n\n"
             "  2. 本地下載預設為開啟；雲端上傳預設為關閉。\n"
-            "     若需雲端上傳，請先使用 @設定雲端資料夾 指令設定父資料夾ID，\n"
-            "     系統會在該父資料夾下自動建立以群組名稱命名的子資料夾，再於該子資料夾下建立 images、files、videos 子資料夾，\n"
-            "     最後將檔案上傳到對應的子資料夾中。\n"
+            "     若需雲端上傳，請先使用 @設定雲端資料夾 指令設定父資料夾ID，系統會在該父資料夾下自動建立以群組名稱命名的子資料夾，再於該子資料夾下建立 images、files、videos 子資料夾，最後將檔案上傳到對應的子資料夾中。\n"
             "  3. 上傳檔案後，系統會依據存儲設定分別進行本地存檔與／或雲端上傳，並回覆相應狀態：\n"
             "     - 若本地下載開啟，回覆提示「已存至本地」。\n"
             "     - 若雲端上傳開啟，回覆雲端連結。\n"
@@ -268,7 +265,7 @@ def handle_text_message(event):
         user_drive_folder[key] = folder_id
         reply = TextSendMessage(text=f"✅ 已設定上傳至 Google Drive 的資料夾ID為：{folder_id}")
         line_bot_api.reply_message(event.reply_token, reply)
-
+    
 
 # ---------------------
 # 處理圖片訊息（支援本地存儲與雲端上傳）
@@ -315,7 +312,6 @@ def handle_image_message(event):
         uploaded_files[key]["images"].append({
             "name": file_name,
             "upload_time": upload_time,
-            "local_link": "",  # 本地連結不回覆
             "cloud_link": cloud_link,
             "file_id": file_id_cloud if cloud_link else ""
         })
@@ -378,7 +374,6 @@ def handle_file_message(event):
         uploaded_files[key]["files"].append({
             "name": file_name,
             "upload_time": upload_time,
-            "local_link": "",  # 本地連結不回覆
             "cloud_link": cloud_link,
             "file_id": file_id_cloud if cloud_link else ""
         })
@@ -437,7 +432,6 @@ def handle_video_message(event):
         uploaded_files[key]["videos"].append({
             "name": file_name,
             "upload_time": upload_time,
-            "local_link": "",  # 本地連結不回覆
             "cloud_link": cloud_link,
             "file_id": file_id_cloud if cloud_link else ""
         })
